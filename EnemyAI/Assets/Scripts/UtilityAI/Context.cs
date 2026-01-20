@@ -1,29 +1,57 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.AI;
-using UnityEngine.InputSystem;
 using UnityUtils;
 
 namespace UtilityAI
 {
-    public class Context {
-        public Brain brain;
-        public NavMeshAgent agent;
-        public Transform target;
-        public Sensor sensor;
+    public class Context
+    {
+        public readonly Brain Brain;
+        public readonly Transform Self;
+        public readonly Transform Player;
 
-        private readonly Dictionary<string, object> data;
+        public readonly ActorStance ActorStance;
+        public readonly PlayerStance PlayerStance;
 
-        public Context(Brain brain)
+        public float DistanceToPlayer { get; private set; }
+        public Transform HeadTransform { get; private set; }
+
+        private readonly Dictionary<string, object> _data;
+
+        public Context(Brain brain, Transform player)
         {
-            Preconditions.CheckNotNull(brain, nameof (brain));
+            Preconditions.CheckNotNull(brain, nameof(brain));
+            Preconditions.CheckNotNull(player, nameof(player));
+
+            Brain = brain;
+            Self = brain.transform;
+            Player = player;
+
+            ActorStance = brain.GetComponent<ActorStance>();
+            PlayerStance = player.GetComponent<PlayerStance>();
+
+            _data = new Dictionary<string, object>();
             
-            this.brain = brain;
-            this.agent = brain.gameObject.GetComponent<NavMeshAgent>();
-            this.sensor = brain.gameObject.GetComponent<Sensor>();
+            var animator = brain.GetComponent<Animator>();
+            if (animator != null)
+            {
+                HeadTransform = animator.GetBoneTransform(HumanBodyBones.Head);
+            }
         }
-        
-        public T GetData<T>(string key) => data.TryGetValue(key, out var value) ? (T)value : default;
-        public void SetData(string key, object value) => data[key] = value;            
+
+        public void Update()
+        {
+            DistanceToPlayer = Vector3.Distance(Self.position, Player.position);
+        }
+
+        public T GetData<T>(string key)
+        {
+            return _data.TryGetValue(key, out var value) ? (T)value : default;
+        }
+
+        public void SetData(string key, object value)
+        {
+            _data[key] = value;
+        }
     }
 }
